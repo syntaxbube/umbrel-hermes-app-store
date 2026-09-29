@@ -29,6 +29,7 @@ def main() -> int:
             "manifest routes app dashboard port 9119": bool(re.search(r'^port:\s*9119\s*$', app, re.M)),
             "compose uses official Hermes image": "image: nousresearch/hermes-agent:latest" in compose,
             "compose enables Hermes dashboard": bool(re.search(r'^\s+HERMES_DASHBOARD:\s*[\"\']?1[\"\']?\s*$', compose, re.M)),
+            "compose does not preempt Hermes PID 1 supervision": not bool(re.search(r'^\s+init:\s*true\s*$', compose, re.M)),
             "dashboard Basic Auth uses generated Umbrel password": "HERMES_DASHBOARD_BASIC_AUTH_PASSWORD: ${APP_PASSWORD}" in compose,
             "dashboard session secret uses generated Umbrel seed": "HERMES_DASHBOARD_BASIC_AUTH_SECRET: ${APP_SEED}" in compose,
             "compose persists Hermes data": "${APP_DATA_DIR}/data:/opt/data" in compose,

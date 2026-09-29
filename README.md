@@ -14,7 +14,9 @@ The store ID is `hermes-lab`; Umbrel requires this prefix on each app ID.
 
 The app uses Nous Research's official `nousresearch/hermes-agent:latest` multi-architecture image. Its official Docker documentation states the image ships with full Chromium for Playwright/browser automation. `shm_size: 1gb` is set because Chromium needs shared memory. Hermes configuration and user data persist in the app data directory mounted at `/opt/data`.
 
-The Umbrel app proxy routes the browser UI to the Hermes dashboard on container port `9119`. The dashboard has built-in Basic Auth enabled: the login name is `hermes`, and its password is Umbrel's generated per-app `APP_PASSWORD`, shown by Umbrel in the app UI. The stable session-signing key uses Umbrel's per-app `APP_SEED`; no reusable password or signing key is committed to this repository. The API port `8642` is intentionally not published through the app proxy; expose it separately only if you understand the network/security implications and have a specific API client.
+The Umbrel app proxy routes the browser UI to the Hermes dashboard on container port `9119`. Open Hermes from its app tile in umbrelOS; this internal port is the proxy target and is not published as `umbrel.local:9119`. Keep Hermes as PID 1: its image entrypoint starts s6-overlay, which supervises the gateway and dashboard. Do not add Compose `init: true`, because that inserts another PID 1 and disables Hermes service supervision.
+
+The dashboard has built-in Basic Auth enabled: the login name is `hermes`, and its password is Umbrel's generated per-app `APP_PASSWORD`, shown by Umbrel in the app UI. The stable session-signing key uses Umbrel's per-app `APP_SEED`; no reusable password or signing key is committed to this repository. The API port `8642` is intentionally not published through the app proxy; expose it separately only if you understand the network/security implications and have a specific API client.
 
 ## Research and references
 
