@@ -1,0 +1,22 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: hermes-lab-hermes-agent_server_1
+      APP_PORT: 9119
+      PROXY_AUTH_ADD: "false"
+
+  server:
+    image: nousresearch/hermes-agent:latest
+    command: gateway run
+    restart: unless-stopped
+    init: true
+    shm_size: "1gb"
+    environment:
+      HERMES_DASHBOARD: "1"
+      HERMES_DASHBOARD_BASIC_AUTH_USERNAME: hermes
+      HERMES_DASHBOARD_BASIC_AUTH_PASSWORD: ${APP_PASSWORD}
+      HERMES_DASHBOARD_BASIC_AUTH_SECRET: ${APP_SEED}
+    volumes:
+      - ${APP_DATA_DIR}/data:/opt/data
