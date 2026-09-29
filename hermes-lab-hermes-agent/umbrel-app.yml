@@ -4,7 +4,7 @@ name: Hermes Agent
 tagline: A self-hosted AI agent with persistent memory and browser tools
 icon: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/static/img/favicon.svg
 category: AI
-version: "1.0.1"
+version: "1.0.2"
 port: 9119
 description: >-
   Run Hermes Agent on your umbrelOS server with a persistent configuration,
@@ -18,8 +18,10 @@ submitter: Hermes Lab
 submission: https://github.com/NousResearch/hermes-agent
 repo: https://github.com/NousResearch/hermes-agent
 support: https://github.com/NousResearch/hermes-agent/issues
+defaultUsername: hermes
+deterministicPassword: true
 releaseNotes: >-
-  1.0.1: Fix Hermes dashboard startup by preserving PID 1 for s6 supervision.
-  Keep the container port internal to the Umbrel app proxy.
+  1.0.2: Show the generated Hermes dashboard login in umbrelOS's default
+  credentials popup.
 dependencies: []
 path: ""
