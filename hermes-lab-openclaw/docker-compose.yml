@@ -1,0 +1,85 @@
+services:
+  app_proxy:
+    environment:
+      APP_HOST: hermes-lab-openclaw_server_1
+      APP_PORT: 18789
+
+  init_perms:
+    image: ghcr.io/openclaw/openclaw:2026.9.7-browser@sha256:6cca1e91e167018d71207e4aa4cbb3f255e982a60076769349cd2f68095e4abc
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        mkdir -p "$${OPENCLAW_STATE_DIR}"
+        node -e '
+        const fs = require("node:fs");
+        const path = require("node:path");
+        const configPath = process.env.OPENCLAW_CONFIG_PATH;
+        if (!configPath || !process.env.OPENCLAW_GATEWAY_TOKEN) {
+          throw new Error("OPENCLAW_CONFIG_PATH and OPENCLAW_GATEWAY_TOKEN are required");
+        }
+        fs.mkdirSync(path.dirname(configPath), { recursive: true });
+        if (!fs.existsSync(configPath)) {
+          const initialConfig = {
+            gateway: {
+              mode: "local",
+              bind: "lan",
+              port: 18789,
+              auth: {
+                mode: "token",
+                token: "$${OPENCLAW_GATEWAY_TOKEN}",
+              },
+            },
+            browser: { enabled: true, defaultProfile: "openclaw", headless: true },
+            plugins: { entries: { browser: { enabled: true } } },
+            tools: { alsoAllow: ["browser"] },
+          };
+          try {
+            fs.writeFileSync(configPath, JSON.stringify(initialConfig, null, 2) + "\n", {
+              encoding: "utf8",
+              flag: "wx",
+              mode: 0o600,
+            });
+          } catch (error) {
+            if (error.code !== "EEXIST") throw error;
+          }
+        }
+        '
+        chown -R 1000:1000 "$${OPENCLAW_STATE_DIR}"
+    restart: "no"
+    environment:
+      OPENCLAW_STATE_DIR: /home/node/.openclaw
+      OPENCLAW_CONFIG_PATH: /home/node/.openclaw/openclaw.json
+      OPENCLAW_GATEWAY_TOKEN: ${APP_PASSWORD:?Umbrel APP_PASSWORD is required}
+    volumes:
+      - ${APP_DATA_DIR}/data:/home/node/.openclaw
+
+  # Keep upstream defaults; docker-entrypoint runs doctor repair before the Gateway.
+  server:
+    image: ghcr.io/openclaw/openclaw:2026.9.7-browser@sha256:6cca1e91e167018d71207e4aa4cbb3f255e982a60076769349cd2f68095e4abc
+    user: "1000:1000"
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 1m
+    shm_size: "1gb"
+    cap_drop:
+      - NET_RAW
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      init_perms:
+        condition: service_completed_successfully
+    environment:
+      HOME: /home/node
+      OPENCLAW_HOME: /home/node
+      OPENCLAW_STATE_DIR: /home/node/.openclaw
+      OPENCLAW_CONFIG_DIR: /home/node/.openclaw
+      OPENCLAW_CONFIG_PATH: /home/node/.openclaw/openclaw.json
+      OPENCLAW_WORKSPACE_DIR: /home/node/.openclaw/workspace
+      OPENCLAW_GATEWAY_PORT: "18789"
+      OPENCLAW_GATEWAY_TOKEN: ${APP_PASSWORD:?Umbrel APP_PASSWORD is required}
+      OPENCLAW_DISABLE_BONJOUR: "1"
+      TZ: UTC
+    volumes:
+      - ${APP_DATA_DIR}/data:/home/node/.openclaw
