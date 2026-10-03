@@ -1,0 +1,35 @@
+services:
+  app_proxy:
+    environment:
+      APP_HOST: hermes-lab-openclaw-umbrel_server_1
+      APP_PORT: 18789
+
+  init_perms:
+    image: ghcr.io/syntaxbube/openclaw-umbrel:2026.9.8@sha256:2754e604a9d4a523dec67d5b1d821fde3c24bf708ca62def144c1440e622e3b6
+    user: "0:0"
+    entrypoint: /bin/sh
+    command:
+      - -ec
+      - mkdir -p /data/linuxbrew && chown 1000:1000 /data /data/linuxbrew
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+    restart: "no"
+
+  server:
+    image: ghcr.io/syntaxbube/openclaw-umbrel:2026.9.8@sha256:2754e604a9d4a523dec67d5b1d821fde3c24bf708ca62def144c1440e622e3b6
+    user: "1000:1000"
+    init: true
+    restart: unless-stopped
+    depends_on:
+      init_perms:
+        condition: service_completed_successfully
+    environment:
+      APP_SEED: ${APP_SEED:?Umbrel APP_SEED is required}
+      OPENCLAW_STATE_DIR: /data/.openclaw
+      OPENCLAW_SERVICE_REPAIR_POLICY: external
+      OPENCLAW_SUPERVISOR_MODE: external
+      OPENCLAW_NO_RESPAWN: "1"
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+      - ${APP_DATA_DIR}/data/linuxbrew:/home/linuxbrew
+    shm_size: "1gb"

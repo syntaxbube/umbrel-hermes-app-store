@@ -5,8 +5,8 @@ A community app store containing Hermes Agent and OpenClaw.
 ## Install on umbrelOS
 
 1. In umbrelOS, open **App Store → Add a community app store** and enter `https://github.com/syntaxbube/umbrel-hermes-app-store`.
-2. Install **Hermes Agent** and/or **OpenClaw** from the Hermes Lab store.
-3. Open Hermes and complete setup in its dashboard. OpenClaw's Gateway token is shown in Umbrel's credentials popup; paste it into the Control UI's **Gateway secret** field, then configure a model/provider. A first OpenClaw browser may need one-time pairing approval; see below.
+2. Install **Hermes Agent** and/or **OpenClaw Umbrel** from the Hermes Lab store.
+3. Open the app and complete its dashboard setup. OpenClaw Umbrel provides a browser onboarding wizard and uses Umbrel login rather than a shared Gateway token.
 
 The store ID is `hermes-lab`; Umbrel requires this prefix on each app ID.
 
@@ -20,13 +20,15 @@ The dashboard has built-in Basic Auth enabled. The login name is `hermes`; the p
 
 ## OpenClaw
 
-The OpenClaw app uses the official `ghcr.io/openclaw/openclaw:2026.9.7-browser` multi-architecture image, pinned in Compose by its verified OCI index digest for `linux/amd64` and `linux/arm64`. The `-browser` variant bundles Chromium. The app enables OpenClaw's browser plugin and headless browser profile, allocates 1 GiB of shared memory, and persists gateway state, configuration, and workspace data under `${APP_DATA_DIR}/data`.
+The new app ID is `hermes-lab-openclaw-umbrel`, display name **OpenClaw Umbrel**, version **2026.9.8**. It packages the reviewed [Umbrel integration](https://github.com/getumbrel/openclaw-umbrel/pull/98) with OpenClaw 2026.9.8. Source and the upstream MIT license are preserved in `build/openclaw-umbrel`. Our GitHub Actions workflow builds and tests native `linux/amd64` and `linux/arm64` images, then publishes the index to `ghcr.io/syntaxbube/openclaw-umbrel:2026.9.8`. Compose pins its verified index digest `sha256:2754e604a9d4a523dec67d5b1d821fde3c24bf708ca62def144c1440e622e3b6`. The image is anonymously pullable and includes Chromium and persistent Homebrew tooling.
 
-The Gateway listens internally on port `18789`; Umbrel's app proxy routes the tile to that service. Manifest port `18887` is the host-facing app-tile port, not a direct container port. The raw Gateway port is not published. Open the app from the Umbrel tile. Umbrel's app-proxy authentication is intentionally left enabled. The Gateway token is Umbrel's generated `APP_PASSWORD`, exposed in the credentials popup under the label **OpenClaw Gateway token**; OpenClaw has no separate dashboard username, so paste the popup's password value into **Gateway secret**.
+Umbrel's authenticated app proxy routes to the setup/wrapper service on port `18789`. The underlying Gateway listens only on loopback port `18790`. Neither port is published by Compose; manifest port `18887` is the host-facing tile port. Configuration, workspace, npm tools and Homebrew files persist under `${APP_DATA_DIR}/data`, with the Homebrew subdirectory also mounted at `/home/linuxbrew`. A one-shot service initializes directory ownership for UID 1000. The image's wrapper initializes the home skeleton and supervises the Gateway.
 
-**Security note:** OpenClaw's Control UI is an administrator interface. OpenClaw v2026.9.7 supports browser identity and normal pairing over HTTP using pure-JavaScript Ed25519, so this package keeps device pairing enabled and does not use the retired `dangerouslyDisableDeviceAuth` setting. A first browser connection through Umbrel's proxy may require one-time approval. If the UI says `pairing required`, keep it open and, over SSH to Umbrel, run `sudo docker exec -it hermes-lab-openclaw_server_1 openclaw devices list`, then approve the exact request with `sudo docker exec -it hermes-lab-openclaw_server_1 openclaw devices approve <requestId>`. The Gateway token and Umbrel app-proxy login remain required. Plain HTTP is still unencrypted, so an on-path attacker could capture the token or modify the UI; keep this LAN-only, retain proxy authentication, and never publish the raw Gateway port. Prefer HTTPS when available.
+**Security note:** The setup UI and Control UI are administrator interfaces. The wrapper asserts the authenticated Umbrel owner, strips spoofed identity/forwarding headers, checks browser origin, and automatically enrolls browser devices using trusted-proxy authentication. Internal CLI clients use a separately generated persistent password. `APP_SEED` is required for setup-terminal protection; no credentials are committed. Never disable Umbrel proxy authentication or publish the wrapper/Gateway directly. The upstream image intentionally allows passwordless sudo inside the container for tooling; do not mount Docker sockets, host directories or other apps' data. This container boundary is not a hardened sandbox against hostile agents. Prefer HTTPS and keep access private.
 
-A one-shot Compose service seeds the initial config before OpenClaw starts and preserves later edits; the Gateway container keeps the official entrypoint so its non-interactive Doctor repair runs on startup and image upgrades. To update OpenClaw, verify a newer official multi-architecture image digest, update the pinned image reference, and bump the app's manifest version so Umbrel offers an app update; do not rely on `openclaw update` inside the container, because the image is replaced when Umbrel recreates it.
+**Replacement scope:** Only the old `hermes-lab-openclaw` store entry is removed. This is a separate app, not an automatic update or data migration. Existing installed app data is untouched. Both entries use tile port `18887`; do not run both simultaneously. Preserve/back up existing data before any operator-managed migration. No deployment, reboot or timer changes are part of this publication.
+
+For updates, edit the preserved build source, run the publication and runtime-verification workflows, verify anonymous image access and both architectures, then update the pinned digest and app version. Do not rely on self-updates inside the container.
 
 ## Research and references
 

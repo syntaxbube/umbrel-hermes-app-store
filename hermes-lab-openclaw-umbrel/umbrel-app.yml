@@ -1,0 +1,30 @@
+manifestVersion: 1
+id: hermes-lab-openclaw-umbrel
+name: OpenClaw Umbrel
+tagline: A personal AI assistant with integrated Umbrel onboarding
+icon: https://raw.githubusercontent.com/openclaw/openclaw/main/ui/public/favicon.svg
+category: AI
+version: "2026.9.8"
+port: 18887
+description: >-
+  OpenClaw 2026.9.8 with the Umbrel setup wizard, Chromium browser automation,
+  persistent configuration and Homebrew tools. Configure your AI provider in
+  the setup UI. Umbrel's authenticated app proxy protects the administrator
+  interface; the internal Gateway is loopback-only. Do not expose the wrapper
+  or Gateway directly to the Internet.
+
+  This is a new app, not an in-place upgrade of the retired OpenClaw entry.
+  Existing installed app data is not migrated or deleted. Install separately;
+  do not run both apps on host-facing port 18887 at the same time.
+developer: OpenClaw
+website: https://openclaw.ai/
+submitter: Hermes Lab
+submission: https://github.com/syntaxbube/umbrel-hermes-app-store
+repo: https://github.com/syntaxbube/umbrel-hermes-app-store
+support: https://github.com/syntaxbube/umbrel-hermes-app-store/issues
+releaseNotes: >-
+  Add the reviewed OpenClaw Umbrel integration for OpenClaw 2026.9.8, with
+  native AMD64 and ARM64 images, trusted-proxy browser authentication,
+  onboarding completion fixes, and container-owned Gateway supervision.
+dependencies: []
+path: ""

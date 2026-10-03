@@ -10,10 +10,10 @@ STORE = ROOT / "umbrel-app-store.yml"
 APP_DIR = ROOT / "hermes-lab-hermes-agent"
 APP = APP_DIR / "umbrel-app.yml"
 COMPOSE = APP_DIR / "docker-compose.yml"
-OPENCLAW_DIR = ROOT / "hermes-lab-openclaw"
+OPENCLAW_DIR = ROOT / "hermes-lab-openclaw-umbrel"
 OPENCLAW_APP = OPENCLAW_DIR / "umbrel-app.yml"
 OPENCLAW_COMPOSE = OPENCLAW_DIR / "docker-compose.yml"
-OPENCLAW_IMAGE = "ghcr.io/openclaw/openclaw:2026.9.7-browser@sha256:6cca1e91e167018d71207e4aa4cbb3f255e982a60076769349cd2f68095e4abc"
+OPENCLAW_IMAGE = "ghcr.io/syntaxbube/openclaw-umbrel:2026.9.8@sha256:2754e604a9d4a523dec67d5b1d821fde3c24bf708ca62def144c1440e622e3b6"
 
 
 def read(path: Path) -> str:
@@ -54,29 +54,25 @@ def main() -> int:
             "Hermes data is persisted": "${APP_DATA_DIR}/data:/opt/data" in compose,
             "Hermes allocates Chromium shared memory": bool(re.search(r'^\s+shm_size:\s*[\"\']?1gb[\"\']?\s*$', compose, re.M)),
             "Hermes proxy target is dashboard port 9119": bool(re.search(r'^\s+APP_PORT:\s*9119\s*$', compose, re.M)),
-            "OpenClaw app ID is store-prefixed": bool(re.search(r'^id:\s*hermes-lab-openclaw\s*$', openclaw_app, re.M)),
+            "OpenClaw app ID is store-prefixed and distinct from retired app": bool(re.search(r'^id:\s*hermes-lab-openclaw-umbrel\s*$', openclaw_app, re.M)),
             "OpenClaw manifest uses supported version": bool(re.search(r'^manifestVersion:\s*1\s*$', openclaw_app, re.M)),
-            "OpenClaw Umbrel package version is 1.0.0": bool(re.search(r'^version:\s*[\"\']1\.0\.0[\"\']\s*$', openclaw_app, re.M)),
+            "OpenClaw Umbrel package version is 2026.9.8": bool(re.search(r'^version:\s*[\"\']2026\.9\.8[\"\']\s*$', openclaw_app, re.M)),
             "OpenClaw manifest uses unique host-facing tile port 18887": bool(re.search(r'^port:\s*18887\s*$', openclaw_app, re.M)),
-            "OpenClaw generated token is shown in Umbrel credentials": bool(re.search(r'^defaultUsername:\s*OpenClaw Gateway token\s*$', openclaw_app, re.M)) and bool(re.search(r'^deterministicPassword:\s*true\s*$', openclaw_app, re.M)),
-            "OpenClaw manifest matches pinned upstream release 2026.9.7": "OpenClaw 2026.9.7" in openclaw_app and "2026.9.7-browser" in openclaw_compose,
-            "OpenClaw uses the verified official multi-arch digest-pinned image": openclaw_compose.count(OPENCLAW_IMAGE) == 2,
-            "OpenClaw Gateway token uses Umbrel APP_PASSWORD": "OPENCLAW_GATEWAY_TOKEN: ${APP_PASSWORD:?Umbrel APP_PASSWORD is required}" in openclaw_compose,
+            "OpenClaw no longer advertises retired shared-token credentials": "defaultUsername:" not in openclaw_app and "deterministicPassword:" not in openclaw_app,
+            "OpenClaw manifest matches pinned upstream release 2026.9.8": "OpenClaw 2026.9.8" in openclaw_app and "2026.9.8@sha256:" in openclaw_compose,
+            "OpenClaw uses the verified native multi-arch digest-pinned image": openclaw_compose.count(OPENCLAW_IMAGE) == 2,
+            "OpenClaw setup uses mandatory generated Umbrel seed": "APP_SEED: ${APP_SEED:?Umbrel APP_SEED is required}" in openclaw_server,
             "OpenClaw app proxy targets internal Gateway port 18789": bool(re.search(r'^\s+APP_PORT:\s*18789\s*$', openclaw_compose, re.M)),
-            "OpenClaw state and workspace are persisted": "${APP_DATA_DIR}/data:/home/node/.openclaw" in openclaw_compose,
-            "OpenClaw storage is initialized for non-root UID 1000": 'chown -R 1000:1000 "$${OPENCLAW_STATE_DIR}"' in openclaw_init and 'user: "1000:1000"' in openclaw_server,
+            "OpenClaw state and workspace are persisted": "${APP_DATA_DIR}/data:/data" in openclaw_compose and "${APP_DATA_DIR}/data/linuxbrew:/home/linuxbrew" in openclaw_server,
+            "OpenClaw storage is initialized for non-root UID 1000": 'chown 1000:1000 /data /data/linuxbrew' in openclaw_init and 'user: "1000:1000"' in openclaw_server,
             "OpenClaw gateway waits for storage initialization": "condition: service_completed_successfully" in openclaw_compose,
             "OpenClaw does not publish a raw Gateway port": not bool(re.search(r'^\s*ports:\s*$', openclaw_compose, re.M)),
             "Umbrel app-proxy authentication remains enabled": "PROXY_AUTH_ADD" not in openclaw_compose,
-            "OpenClaw setup seeds config before the official entrypoint without an extra package file": "node -e '" in openclaw_init and "OPENCLAW_CONFIG_PATH" in openclaw_init and "init-config.js" not in openclaw_compose,
-            "OpenClaw init service receives the Umbrel-generated token": "OPENCLAW_GATEWAY_TOKEN: ${APP_PASSWORD:?Umbrel APP_PASSWORD is required}" in openclaw_init,
-            "OpenClaw Gateway server preserves the official entrypoint and command": "command:" not in openclaw_server and "entrypoint:" not in openclaw_server,
-            "OpenClaw Control UI requires token auth": 'mode: "token"' in openclaw_init and 'token: "$${OPENCLAW_GATEWAY_TOKEN}"' in openclaw_init,
-            "OpenClaw keeps supported default Control UI device pairing": "dangerouslyDisableDeviceAuth" not in openclaw_init,
-            "OpenClaw relies on private same-origin defaults without a guessed port": "OPENCLAW_APP_ORIGIN" not in openclaw_init and "allowedOrigins" not in openclaw_init,
-            "OpenClaw browser and browser plugin are enabled": 'browser: { enabled: true' in openclaw_init and 'browser: { enabled: true }' in openclaw_init,
-            "OpenClaw browser tool is allowlisted": 'alsoAllow: ["browser"]' in openclaw_init,
-            "OpenClaw setup preserves an existing user config": "if (!fs.existsSync(configPath))" in openclaw_init and 'flag: "wx"' in openclaw_init,
+            "OpenClaw proxy target matches new app container": "APP_HOST: hermes-lab-openclaw-umbrel_server_1" in openclaw_compose,
+            "OpenClaw preserves image wrapper command": "command:" not in openclaw_server and "entrypoint:" not in openclaw_server,
+            "OpenClaw lifecycle is container-owned": "OPENCLAW_SUPERVISOR_MODE: external" in openclaw_server and "OPENCLAW_NO_RESPAWN:" in openclaw_server,
+            "OpenClaw shared Gateway token is not injected": "OPENCLAW_GATEWAY_TOKEN" not in openclaw_compose,
+            "OpenClaw retired app manifests are absent": not (ROOT / "hermes-lab-openclaw" / "umbrel-app.yml").exists() and not (ROOT / "hermes-lab-openclaw" / "docker-compose.yml").exists(),
             "OpenClaw allocates Chromium shared memory": bool(re.search(r'^\s+shm_size:\s*[\"\']?1gb[\"\']?\s*$', openclaw_compose, re.M)),
         }
         for description, passed in checks.items():
