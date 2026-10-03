@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenClaw Setup</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+      background: #0D0D0D;
+      color: #F0EDE8;
+      min-height: 100vh;
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .header {
+      flex-shrink: 0;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 32px 0;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
+    .header-logo {
+      flex-shrink: 0;
+      width: 140px;
+      height: 140px;
+      margin-left: -30px;
+    }
+
+    .header-text {
+      flex: 1;
+      margin-top: 35px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: #F0EDE8;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #A89F99;
+    }
+
+    .pro-tip {
+      background: #1A1A1A;
+      border: 1px solid #2A2A2A;
+      border-left: 3px solid #FF5A2D;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-top: 0;
+      font-size: 13px;
+      color: #A89F99;
+      line-height: 1.6;
+    }
+
+    .pro-tip strong {
+      color: #F0EDE8;
+      font-weight: 600;
+    }
+
+    .pro-tip em {
+      color: #6B6460;
+      font-style: normal;
+    }
+
+    .mobile-note {
+      display: none;
+      background: #1F1F1F;
+      border: 1px solid #2A2A2A;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-top: 14px;
+      font-size: 13px;
+      color: #A89F99;
+      line-height: 1.5;
+    }
+
+    .mobile-toolbar {
+      display: none;
+      flex-shrink: 0;
+      background: #1A1A1A;
+      border-top: 1px solid #2A2A2A;
+      padding: 10px 12px 12px;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Mobile browsers need a real focused input to open the software keyboard.
+       Keep it invisible so xterm remains the only visible source of typed text. */
+    .mobile-input {
+      position: fixed;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-100vw);
+    }
+
+    .mobile-type-button {
+      width: 100%;
+      min-height: 42px;
+    }
+
+    .mobile-controls {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-areas:
+        "left up down right"
+        "escape space backspace enter";
+      gap: 8px;
+    }
+
+    .mobile-key-escape { grid-area: escape; }
+    .mobile-key-backspace { grid-area: backspace; }
+    .mobile-key-enter { grid-area: enter; }
+    .mobile-key-space { grid-area: space; }
+    .mobile-key-left { grid-area: left; }
+    .mobile-key-up { grid-area: up; }
+    .mobile-key-down { grid-area: down; }
+    .mobile-key-right { grid-area: right; }
+
+    .mobile-key {
+      min-height: 40px;
+      padding: 8px 10px;
+      background: #141414;
+      border: 1px solid #2A2A2A;
+      border-radius: 8px;
+      color: #D4D0CB;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+
+    .mobile-key:active {
+      background: #202020;
+      border-color: #FF5A2D;
+      color: #FF5A2D;
+    }
+
+    .terminal-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 32px 40px;
+      min-height: 0;
+    }
+
+    .terminal-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-radius: 10px;
+      border: 1px solid #2A2A2A;
+      overflow: hidden;
+      max-height: 800px;
+      box-shadow: 0 0 0 1px rgba(255,90,45,0.06), 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .titlebar {
+      flex-shrink: 0;
+      height: 36px;
+      background: #1A1A1A;
+      border-bottom: 1px solid #2A2A2A;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 8px;
+    }
+
+    .titlebar-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .titlebar-dot.close { background: #FF5A60; }
+    .titlebar-dot.minimize { background: #FFBE2E; }
+    .titlebar-dot.maximize { background: #27CA40; }
+
+    .titlebar-label {
+      flex: 1;
+      text-align: center;
+      font-family: 'Menlo', 'Monaco', 'Cascadia Code', 'Courier New', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      color: #6B6460;
+      margin-right: 52px;
+    }
+
+    .terminal-info {
+      flex-shrink: 0;
+      background: #141414;
+      padding: 12px 16px 8px;
+      font-family: 'Menlo', 'Monaco', 'Cascadia Code', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      border-bottom: 1px solid #2A2A2A;
+    }
+
+    .terminal-info .info-heading {
+      color: #D4D0CB;
+      font-weight: bold;
+    }
+
+    .terminal-info .info-dim {
+      color: #6B6460;
+    }
+
+    .terminal-body {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      background: #141414;
+    }
+
+    #terminal,
+    .terminal-body .xterm {
+      width: 100%;
+      height: 100%;
+    }
+
+    .terminal-body .xterm {
+      height: 100%;
+      padding: 8px;
+    }
+
+    /* Hide xterm scrollbar — scrollback still works via mouse wheel/trackpad */
+    .terminal-body .xterm-viewport::-webkit-scrollbar { display: none; }
+    .terminal-body .xterm-viewport { scrollbar-width: none; }
+
+    .terminal-footer {
+      flex-shrink: 0;
+      background: #1A1A1A;
+      border-top: 1px solid #2A2A2A;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      min-height: 40px;
+    }
+
+    .footer-message {
+      font-size: 12px;
+      color: #6B6460;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .footer-message.success { color: #34D399; }
+    .footer-message.error { color: #F87171; }
+
+    .footer-hints {
+      font-size: 11px;
+      color: #6B6460;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .footer-hints kbd {
+      background: #2A2A2A;
+      border: 1px solid #3A3A3A;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: inherit;
+      font-size: 10px;
+      color: #A89F99;
+    }
+
+    .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-restart {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: transparent;
+      border: 1px solid #2A2A2A;
+      color: #A89F99;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .btn-restart:hover {
+      border-color: #FF5A2D;
+      color: #FF5A2D;
+    }
+
+    /* Responsive */
+    @media (pointer: coarse) {
+      .mobile-note { display: block; }
+      .mobile-toolbar { display: flex; }
+    }
+
+    /* Short desktop viewports need to preserve terminal height over surrounding UI. */
+    @media (min-width: 601px) and (max-height: 720px) {
+      .header { padding-top: 24px; }
+      .header-logo {
+        width: 108px;
+        height: 108px;
+        margin-left: -20px;
+      }
+      .header-text { margin-top: 24px; }
+      .pro-tip {
+        padding: 10px 14px;
+        line-height: 1.45;
+      }
+      .terminal-wrapper { padding: 14px 32px 24px; }
+    }
+
+    @media (min-width: 601px) and (max-height: 620px) {
+      .header { padding-top: 14px; }
+      .header-logo {
+        width: 76px;
+        height: 76px;
+        margin-left: -12px;
+      }
+      .header-text { margin-top: 12px; }
+      h1 { font-size: 22px; }
+      .subtitle { line-height: 1.4; }
+      .pro-tip { display: none; }
+      .terminal-wrapper { padding: 10px 24px 14px; }
+      .titlebar { height: 32px; }
+      .terminal-info {
+        padding: 8px 14px 6px;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+      .terminal-footer {
+        padding: 6px 12px;
+        min-height: 36px;
+      }
+    }
+
+    @media (min-width: 601px) and (max-height: 520px) {
+      .header { padding: 10px 24px 0; }
+      .header-logo { display: none; }
+      .header-top { align-items: center; }
+      .header-text { margin-top: 0; }
+      .terminal-info { display: none; }
+      .terminal-wrapper { padding: 8px 24px 10px; }
+    }
+
+    @media (max-width: 600px) {
+      body { min-height: 100svh; min-height: 100dvh; height: 100dvh; overflow: hidden; }
+      .header { padding: 12px 16px 0; }
+      .header-top { flex-direction: column; align-items: center; text-align: center; gap: 0; margin-bottom: 0; }
+      .header-logo { display: none; }
+      .header-text { margin-top: 0; }
+      h1 { font-size: 18px; margin-bottom: 2px; }
+      .subtitle { font-size: 13px; margin-bottom: 4px; }
+      .mobile-note { font-size: 12px; padding: 8px 12px; margin-top: 4px; }
+      .pro-tip { display: none; }
+      .terminal-info { display: none; }
+      .terminal-wrapper { flex: 1; min-height: 0; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); }
+      .terminal-card { flex: 1; min-height: 0; max-height: none; }
+      .terminal-body { min-height: clamp(240px, 44vh, 420px); }
+      .mobile-toolbar { padding: 6px 8px calc(8px + env(safe-area-inset-bottom)); gap: 6px; }
+      .mobile-type-button { min-height: 38px; }
+      .mobile-controls { gap: 6px; }
+      .mobile-key { min-height: 34px; padding: 6px 6px; font-size: 12px; }
+      .terminal-footer { padding: 4px 8px; min-height: 28px; }
+      .btn-restart { padding: 4px 10px; font-size: 11px; }
+      .footer-message { font-size: 11px; }
+      .footer-hints { display: none; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-top">
+      <img src="/logo.webp" alt="OpenClaw" class="header-logo">
+      <div class="header-text">
+        <h1>Welcome to OpenClaw on Umbrel</h1>
+        <p class="subtitle">Your personal AI assistant. Let's get you set up.</p>
+      </div>
+    </div>
+    <div class="pro-tip">
+      <strong>Tip:</strong> Want to switch providers, add models, or set up Telegram? Just ask OpenClaw in chat — no settings menus needed.
+    </div>
+    <div class="mobile-note">
+      Use the controls below to type, navigate, and select options.
+    </div>
+  </div>
+
+  <div class="terminal-wrapper">
+    <div class="terminal-card">
+      <div class="titlebar">
+        <div class="titlebar-dot close"></div>
+        <div class="titlebar-dot minimize"></div>
+        <div class="titlebar-dot maximize"></div>
+        <span class="titlebar-label">OpenClaw Setup</span>
+      </div>
+      <div class="terminal-info">
+        <div class="info-heading">Starting OpenClaw setup...</div>
+        <div class="info-dim">Choose your privacy preference, name your agent, and connect an AI provider.</div>
+        <div class="info-dim">This may take a moment to appear.</div>
+      </div>
+      <div class="terminal-body">
+        <div id="terminal"></div>
+      </div>
+      <div class="mobile-toolbar">
+        <!-- Keyboard bridge only: typed characters are forwarded to the terminal below. -->
+        <input id="mobile-input" class="mobile-input" type="text" tabindex="-1" aria-label="Terminal input" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done">
+        <button id="mobile-keyboard" class="mobile-key mobile-type-button" type="button">Open keyboard</button>
+        <div class="mobile-controls">
+          <button class="mobile-key mobile-key-escape" type="button" data-key="escape">Esc</button>
+          <button class="mobile-key mobile-key-backspace" type="button" data-key="backspace">⌫</button>
+          <button class="mobile-key mobile-key-enter" type="button" data-key="enter">Enter</button>
+          <button class="mobile-key mobile-key-space" type="button" data-key="space">Space</button>
+          <button class="mobile-key mobile-key-left" type="button" data-key="arrow-left">←</button>
+          <button class="mobile-key mobile-key-up" type="button" data-key="arrow-up">↑</button>
+          <button class="mobile-key mobile-key-down" type="button" data-key="arrow-down">↓</button>
+          <button class="mobile-key mobile-key-right" type="button" data-key="arrow-right">→</button>
+        </div>
+      </div>
+      <div class="terminal-footer">
+        <span class="footer-hints">
+          <kbd>↑↓</kbd> Navigate <kbd>Enter</kbd> Select <kbd id="paste-hint">Ctrl+V</kbd> Paste
+        </span>
+        <span class="footer-right">
+          <span id="footer-message" class="footer-message"></span>
+          <!-- blur() before reload prevents browser from restoring focus to button instead of terminal -->
+          <button id="btn-restart" class="btn-restart" onclick="this.blur(); location.reload()">&#x21bb; Start over</button>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const footerMessage = document.getElementById('footer-message');
+      const terminalElement = document.getElementById('terminal');
+      const terminalBody = document.querySelector('.terminal-body');
+      const mobileInput = document.getElementById('mobile-input');
+      const mobileKeyboardButton = document.getElementById('mobile-keyboard');
+      const mobileButtons = Array.from(document.querySelectorAll('.mobile-key[data-key]'));
+      const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+      let hasFocusedOnLoad = false;
+      let hasFocusedAfterFirstOutput = false;
+      let fitTimer = null;
+      let ws;
+
+      const term = new Terminal({
+        cursorBlink: true,
+        cursorStyle: 'block',
+        fontSize: 13,
+        fontFamily: "'Menlo', 'Monaco', 'Cascadia Code', 'Courier New', monospace",
+        lineHeight: 1.2,
+        theme: {
+          background:    '#141414',
+          foreground:    '#D4D0CB',
+          cursor:        '#FF5A2D',
+          cursorAccent:  '#141414',
+          selectionBackground: 'rgba(255,90,45,0.25)',
+          black:         '#1A1A1A',
+          red:           '#E06C75',
+          green:         '#98C379',
+          yellow:        '#E5C07B',
+          blue:          '#61AFEF',
+          magenta:       '#C678DD',
+          cyan:          '#56B6C2',
+          white:         '#ABB2BF',
+          brightBlack:   '#3D4048',
+          brightRed:     '#F87171',
+          brightGreen:   '#34D399',
+          brightYellow:  '#FBBF24',
+          brightBlue:    '#7BB8F5',
+          brightMagenta: '#D4A4E0',
+          brightCyan:    '#6EC9D4',
+          brightWhite:   '#F0EDE8',
+        },
+        scrollback: 1000,
+        rows: 24,
+        cols: 80,
+      });
+
+      const fitAddon = new FitAddon.FitAddon();
+      term.loadAddon(fitAddon);
+      term.open(terminalElement);
+      fitAddon.fit();
+      // Compact mobile layout hides the terminal info header to preserve space.
+      // Keep the terminal itself nonblank while OpenClaw does quiet startup work.
+      if (window.matchMedia('(max-width: 600px)').matches) {
+        term.write('\x1b[38;5;202mStarting OpenClaw setup...\x1b[0m\r\n\x1b[38;5;242mThis may take a moment before the first prompt appears.\x1b[0m\r\n');
+      }
+
+      const focusDesktopTerminal = () => {
+        term.focus();
+        const helperTextarea = terminalElement.querySelector('.xterm-helper-textarea');
+        if (helperTextarea) {
+          try {
+            helperTextarea.focus({ preventScroll: true });
+          } catch (e) {
+            helperTextarea.focus();
+          }
+        }
+        setTimeout(() => {
+          term.focus();
+        }, 0);
+      };
+
+      const focusMobileInput = () => {
+        if (!mobileInput) {
+          return;
+        }
+        try {
+          mobileInput.focus({ preventScroll: true });
+        } catch (e) {
+          mobileInput.focus();
+        }
+      };
+
+      const syncTerminalSize = () => {
+        fitAddon.fit();
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+        }
+      };
+
+      const scheduleTerminalFit = () => {
+        if (fitTimer) {
+          clearTimeout(fitTimer);
+        }
+        fitTimer = setTimeout(() => {
+          syncTerminalSize();
+        }, 30);
+      };
+
+      const scheduleDesktopFocus = () => {
+        if (isCoarsePointer) {
+          return;
+        }
+        focusDesktopTerminal();
+        requestAnimationFrame(() => {
+          focusDesktopTerminal();
+        });
+        setTimeout(() => {
+          focusDesktopTerminal();
+        }, 50);
+        setTimeout(() => {
+          focusDesktopTerminal();
+        }, 250);
+      };
+
+      // Focus management: the terminal must have focus for arrow keys to work.
+      // We aggressively grab focus because users don't know they need to click
+      // the terminal, and losing focus silently breaks the interactive CLI prompts.
+      // On touch devices, the hidden mobile input owns keyboard focus instead.
+      if (!isCoarsePointer) {
+        scheduleDesktopFocus();
+        hasFocusedOnLoad = true;
+      }
+
+      window.addEventListener('load', () => {
+        if (!isCoarsePointer) {
+          scheduleDesktopFocus();
+        }
+      });
+
+      // Refocus on any click outside the restart button (which reloads the page)
+      document.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.btn-restart') || e.target.closest('.mobile-toolbar')) {
+          return;
+        }
+        if (!isCoarsePointer) {
+          scheduleDesktopFocus();
+        }
+      }, true);
+
+      terminalElement.addEventListener('pointerdown', () => {
+        if (!isCoarsePointer) {
+          scheduleDesktopFocus();
+        }
+      }, true);
+
+      window.addEventListener('focus', () => {
+        if (!isCoarsePointer) {
+          scheduleDesktopFocus();
+        }
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && !isCoarsePointer) {
+          scheduleDesktopFocus();
+        }
+      });
+
+      // Show correct paste shortcut for OS
+      if (navigator.platform.indexOf('Mac') !== -1) {
+        document.getElementById('paste-hint').textContent = '⌘V';
+      }
+
+      const getArrowSequence = (direction) => {
+        const suffix = {
+          'arrow-up': 'A',
+          'arrow-down': 'B',
+          'arrow-right': 'C',
+          'arrow-left': 'D',
+        }[direction];
+        const useApplicationMode = !!(term.modes && term.modes.applicationCursorKeysMode);
+        return useApplicationMode ? `\u001bO${suffix}` : `\u001b[${suffix}`;
+      };
+
+      const controlSequences = {
+        enter: '\r',
+        escape: '\u001b',
+        space: ' ',
+        backspace: '\u007f',
+      };
+
+      const sendInput = (data) => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'input', data }));
+        }
+      };
+
+      if (mobileInput) {
+        // The hidden input only exists to summon mobile keyboards. Forward each
+        // character immediately so the terminal remains the source of truth.
+        mobileInput.addEventListener('input', (event) => {
+          const value = event.target.value;
+          if (!value) {
+            return;
+          }
+          sendInput(value);
+          event.target.value = '';
+          scheduleTerminalFit();
+        });
+
+        mobileInput.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            sendInput('\r');
+            event.target.value = '';
+            scheduleTerminalFit();
+          } else if (event.key === 'Backspace') {
+            event.preventDefault();
+            sendInput(controlSequences.backspace);
+            event.target.value = '';
+            scheduleTerminalFit();
+          }
+        });
+      }
+
+      if (mobileKeyboardButton) {
+        const handleKeyboardPress = (event) => {
+          event.preventDefault();
+          focusMobileInput();
+        };
+
+        mobileKeyboardButton.addEventListener('click', handleKeyboardPress);
+      }
+
+      mobileButtons.forEach((button) => {
+        // Use click only for toolbar buttons; adding touch/pointer handlers too
+        // can double-send controls on mobile browsers.
+        const handleButtonPress = (event) => {
+          event.preventDefault();
+          const key = button.dataset.key;
+          const data = key.startsWith('arrow-') ? getArrowSequence(key) : controlSequences[key];
+          if (data) {
+            sendInput(data);
+          }
+          scheduleTerminalFit();
+          if (!isCoarsePointer) {
+            scheduleDesktopFocus();
+          }
+        };
+
+        button.addEventListener('click', handleButtonPress);
+      });
+
+
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(proto + '//' + location.host + '/api/terminal?token=__SETUP_TOKEN__');
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+        if (!isCoarsePointer && !hasFocusedOnLoad) {
+          scheduleDesktopFocus();
+          hasFocusedOnLoad = true;
+        }
+        scheduleTerminalFit();
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'output') {
+            term.write(msg.data);
+            scheduleTerminalFit();
+            if (!isCoarsePointer && !hasFocusedAfterFirstOutput) {
+              scheduleDesktopFocus();
+              hasFocusedAfterFirstOutput = true;
+            }
+          } else if (msg.type === 'exit') {
+            if (msg.code === 0) {
+              term.write('\r\n\x1b[1;32mSetup complete!\x1b[0m You\'ll be redirected to OpenClaw in a moment.\r\n');
+              footerMessage.innerHTML = 'Setup complete! Reloading...';
+              footerMessage.className = 'footer-message success';
+              setTimeout(() => window.location.reload(), 2000);
+            } else {
+              term.write('\r\n\x1b[38;5;242mSetup was interrupted. Click "Start over" below to try again.\x1b[0m\r\n');
+              footerMessage.innerHTML = 'Setup exited unexpectedly.';
+              footerMessage.className = 'footer-message error';
+            }
+          }
+        } catch (e) {}
+      };
+
+      ws.onclose = () => {
+        if (!footerMessage.textContent.includes('complete')) {
+          footerMessage.innerHTML = 'Connection lost.';
+          footerMessage.className = 'footer-message error';
+        }
+      };
+
+      ws.onerror = () => {
+        footerMessage.innerHTML = 'Connection error.';
+        footerMessage.className = 'footer-message error';
+      };
+
+      term.onData((data) => {
+        sendInput(data);
+      });
+
+      const resizeObserver = new ResizeObserver(() => {
+        scheduleTerminalFit();
+      });
+      resizeObserver.observe(document.getElementById('terminal'));
+      resizeObserver.observe(terminalBody);
+
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+          scheduleTerminalFit();
+        });
+        window.visualViewport.addEventListener('scroll', () => {
+          scheduleTerminalFit();
+        });
+      }
+
+      if (isCoarsePointer) {
+        requestAnimationFrame(() => {
+          scheduleTerminalFit();
+        });
+        setTimeout(() => {
+          scheduleTerminalFit();
+        }, 150);
+      }
+    });
+  </script>
+</body>
+</html>
